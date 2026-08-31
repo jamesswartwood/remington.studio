@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remington Lee — Creative Technologist & Multidisciplinary Portfolio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              purple: '#8b5cf6',
+              cyan: '#06b6d4',
+              pink: '#ec4899',
+              amber: '#f59e0b',
+              dark: '#0a0d14'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(139, 92, 246, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(139, 92, 246, 0.7);
+    }
+
+    /* 3D Canvas container */
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      outline: none;
+    }
+
+    /* Floating 3D Hotspot styling */
+    .hotspot-badge {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 10;
+    }
+    .hotspot-badge:hover {
+      transform: translate(-50%, -50%) scale(1.12);
+    }
+
+    /* Custom Glassmorphism */
+    .glass-panel {
+      background: rgba(13, 17, 28, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .glass-btn {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.2s ease;
+    }
+    .glass-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Pulse Glow Animation */
+    @keyframes subtleGlow {
+      0%, 100% { opacity: 0.6; filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4)); }
+      50% { opacity: 1; filter: drop-shadow(0 0 16px rgba(6, 182, 212, 0.8)); }
+    }
+    .glow-effect {
+      animation: subtleGlow 3s infinite ease-in-out;
+    }
+  </style>
+</head>
+
+<body class="bg-[#080b11] text-slate-100 overflow-hidden select-none font-sans w-screen h-screen">
+
+  <!-- ================= 3D CANVAS & OVERLAY MARKERS ================= -->
+  <div id="webgl-container"></div>
+  <div id="hotspots-overlay" class="absolute inset-0 pointer-events-none z-10">
+    <!-- Dynamic 3D HTML Hotspots will be projected here -->
+  </div>
+
+  <!-- ================= TOP HUD / NAVIGATION BAR ================= -->
+  <header class="absolute top-0 left-0 right-0 z-30 p-4 sm:p-6 flex items-center justify-between pointer-events-none">
+    
+    <!-- Creator Profile / Brand -->
+    <div class="flex items-center gap-3 glass-panel px-4 py-2.5 rounded-2xl pointer-events-auto">
+      <div class="relative">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-pink-500 to-cyan-400 p-[2px] flex items-center justify-center">
+          <div class="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-300">
+            RL
+          </div>
+        </div>
+        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full animate-ping"></span>
+        <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full"></span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm sm:text-base font-bold tracking-tight text-white">Remington Lee</h1>
+          <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Available</span>
+        </div>
+        <p class="text-xs text-slate-400">Design • Game Dev • Audio • Seattle, WA</p>
+      </div>
+    </div>
+
+    <!-- Quick Navigation Dock (Direct camera jumping) -->
+    <nav class="hidden md:flex items-center gap-1.5 glass-panel p-1.5 rounded-2xl pointer-events-auto">
+      <button onclick="setCameraView('overview')" id="nav-overview" class="nav-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-white bg-white/10 transition-all flex items-center gap-2">
+        <i class="fa-solid fa-cube text-purple-400"></i> Studio Overview
+      </button>
+      <button onclick="setCameraView('design')" id="nav-design" class="nav-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2">
+        <i class="fa-solid fa-palette text-pink-400"></i> Graphic Design
+      </button>
+      <button onclick="setCameraView('games')" id="nav-games" class="nav-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2">
+        <i class="fa-solid fa-gamepad text-cyan-400"></i> Game Dev
+      </button>
+      <button onclick="setCameraView('audio')" id="nav-audio" class="nav-pill px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2">
+        <i class="fa-solid fa-music text-amber-400"></i> Music & Stems
+      </button>
+    </nav>
+
+    <!-- Guardrail: Recruiter Mode & Audio Toggle -->
+    <div class="flex items-center gap-2.5 pointer-events-auto">
+      
+      <!-- Synthesizer BGM Audio Player (Main View) -->
+      <button id="audio-toggle-btn" onclick="toggleAudioEngine()" class="glass-panel hover:bg-slate-800/80 px-3.5 py-2 rounded-xl text-xs font-medium flex items-center gap-2.5 transition group" title="Toggle Lo-Fi Ambient Synthesizer">
+        <span class="relative flex h-2.5 w-2.5">
+          <span id="audio-ping" class="hidden absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75 animate-ping"></span>
+          <span id="audio-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-500 group-hover:bg-slate-400"></span>
+        </span>
+        <span id="audio-text" class="text-slate-300 group-hover:text-white">Studio BGM: <strong class="text-slate-400">Muted</strong></span>
+        <i id="audio-icon" class="fa-solid fa-volume-xmark text-slate-400 group-hover:text-white"></i>
+      </button>
+
+      <!-- Recruiter Quick View Button (Crucial Usability Guardrail) -->
+      <button onclick="openModal('resume-modal')" class="bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-xl shadow-lg shadow-purple-900/30 flex items-center gap-2 transition transform active:scale-95">
+        <i class="fa-solid fa-bolt text-amber-300"></i>
+        <span>Recruiter Mode <span class="hidden sm:inline">(Resume)</span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= BOTTOM HUD & CONTROLS HELPER ================= -->
+  <footer class="absolute bottom-4 sm:bottom-6 left-0 right-0 z-30 px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 pointer-events-none">
+    
+    <!-- Camera hints & navigation helper -->
+    <div class="glass-panel px-4 py-2 rounded-xl text-xs text-slate-400 flex items-center gap-3 pointer-events-auto">
+      <span class="flex items-center gap-1.5"><i class="fa-solid fa-arrows-up-down-left-right text-purple-400"></i> Click & Drag to Orbit</span>
+      <span class="text-slate-600">|</span>
+      <span class="flex items-center gap-1.5"><i class="fa-solid fa-magnifying-glass text-cyan-400"></i> Scroll to Zoom</span>
+      <span class="text-slate-600">|</span>
+      <span class="flex items-center gap-1.5 text-pink-300 font-medium"><i class="fa-solid fa-hand-pointer animate-bounce"></i> Click any workstation</span>
+    </div>
+
+    <!-- Mobile Navigation Switcher (shows only on smaller devices) -->
+    <div class="flex md:hidden items-center gap-1 glass-panel p-1.5 rounded-xl pointer-events-auto">
+      <button onclick="setCameraView('overview')" class="p-2 rounded-lg bg-white/10 text-white text-xs"><i class="fa-solid fa-cube"></i></button>
+      <button onclick="setCameraView('design')" class="p-2 rounded-lg text-pink-400 hover:bg-white/5 text-xs"><i class="fa-solid fa-palette"></i></button>
+      <button onclick="setCameraView('games')" class="p-2 rounded-lg text-cyan-400 hover:bg-white/5 text-xs"><i class="fa-solid fa-gamepad"></i></button>
+      <button onclick="setCameraView('audio')" class="p-2 rounded-lg text-amber-400 hover:bg-white/5 text-xs"><i class="fa-solid fa-music"></i></button>
+    </div>
+
+    <!-- Contact quick links -->
+    <div class="flex items-center gap-2 glass-panel px-3 py-1.5 rounded-xl pointer-events-auto">
+      <button onclick="openModal('contact-modal')" class="text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-white/5 flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-envelope text-cyan-400"></i> Get in Touch
+      </button>
+      <a href="https://github.com" target="_blank" rel="noreferrer" class="text-xs text-slate-400 hover:text-white p-1.5 rounded hover:bg-white/5 transition" title="GitHub">
+        <i class="fa-brands fa-github text-sm"></i>
+      </a>
+      <a href="https://itch.io" target="_blank" rel="noreferrer" class="text-xs text-slate-400 hover:text-white p-1.5 rounded hover:bg-white/5 transition" title="Itch.io">
+        <i class="fa-brands fa-itch-io text-sm"></i>
+      </a>
+      <a href="https://dribbble.com" target="_blank" rel="noreferrer" class="text-xs text-slate-400 hover:text-white p-1.5 rounded hover:bg-white/5 transition" title="Dribbble">
+        <i class="fa-brands fa-dribbble text-sm"></i>
+      </a>
+    </div>
+  </footer>
+
+  <!-- ================= NOTIFICATION TOAST ================= -->
+  <div id="toast-box" class="fixed top-20 right-6 z-50 transform translate-x-32 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="glass-panel px-4 py-3 rounded-xl border border-cyan-500/40 text-xs sm:text-sm text-cyan-200 flex items-center gap-2 shadow-2xl">
+      <i class="fa-solid fa-circle-check text-cyan-400"></i>
+      <span id="toast-message">Notification message here</span>
+    </div>
+  </div>
+
+  <!-- ================= MODALS & SHOWCASES ================= -->
+
+  <!-- 1. GRAPHIC DESIGN MODAL -->
+  <div id="design-modal" class="modal-wrapper fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div class="glass-panel max-w-4xl w-full max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-pink-500/30 animate-scale-in">
+      <!-- Modal Header -->
+      <div class="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-pink-950/30 to-purple-950/20">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-pink-500/20 text-pink-400 border border-pink-500/30 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-palette"></i>
+          </div>
+          <div>
+            <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              Graphic Design & Visual Systems
+              <span class="text-xs font-mono px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/30">Art Gallery</span>
+            </h2>
+            <p class="text-xs text-slate-400">Brand identities, 3D key visual art, UI design systems, and album packaging.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('design-modal')" class="w-8 h-8 rounded-full glass-btn text-slate-400 hover:text-white flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-6">
+        <!-- Filter Tabs -->
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <button class="px-3 py-1.5 rounded-lg bg-pink-500 text-white font-medium">All Works</button>
+          <button class="px-3 py-1.5 rounded-lg glass-btn text-slate-300 hover:text-white">Brand Identity</button>
+          <button class="px-3 py-1.5 rounded-lg glass-btn text-slate-300 hover:text-white">3D Art & Motion</button>
+          <button class="px-3 py-1.5 rounded-lg glass-btn text-slate-300 hover:text-white">Editorial & Packaging</button>
+        </div>
+
+        <!-- Project Grid (Generic Placeholders) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Project 1 Placeholder -->
+          <div class="glass-panel p-4 rounded-2xl border border-white/5 hover:border-pink-500/40 transition group">
+            <div class="h-48 rounded-xl overflow-hidden relative mb-3 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-6 text-center">
+              <div class="space-y-2">
+                <div class="w-12 h-12 mx-auto rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-pink-300 text-2xl group-hover:scale-110 transition duration-300">
+                  <i class="fa-solid fa-shapes"></i>
+                </div>
+                <h4 class="font-bold text-white text-lg tracking-wider">[PROJECT TITLE PLACEHOLDER]</h4>
+                <p class="text-[11px] text-pink-200/70 uppercase tracking-widest font-mono">[Category / Subtitle Placeholder]</p>
+              </div>
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-xs">
+                <span class="text-xs bg-white text-slate-900 font-bold px-3 py-1.5 rounded-lg shadow-lg">View Case Study</span>
+              </div>
+            </div>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h3 class="font-bold text-sm text-white group-hover:text-pink-300 transition">[Featured Design Case Study Name]</h3>
+                <p class="text-xs text-slate-400 mt-1">Placeholder description for graphic design project scope, typography systems, and identity deliverables.</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-1.5 mt-3">
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-slate-300">Tool A</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-slate-300">Tool B</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-slate-300">Tool C</span>
+            </div>
+          </div>
+
+          <!-- Project 2 Placeholder -->
+          <div class="glass-panel p-4 rounded-2xl border border-white/5 hover:border-pink-500/40 transition group">
+            <div class="h-48 rounded-xl overflow-hidden relative mb-3 bg-gradient-to-br from-cyan-950 via-slate-900 to-amber-950 flex items-center justify-center p-6 text-center">
+              <div class="space-y-2">
+                <div class="w-12 h-12 mx-auto rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-cyan-300 text-2xl group-hover:scale-110 transition duration-300">
+                  <i class="fa-solid fa-compact-disc"></i>
+                </div>
+                <h4 class="font-bold text-white text-lg tracking-wider">[PROJECT TITLE PLACEHOLDER]</h4>
+                <p class="text-[11px] text-cyan-200/70 uppercase tracking-widest font-mono">[3D / Visual Concept Placeholder]</p>
+              </div>
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center backdrop-blur-xs">
+                <span class="text-xs bg-white text-slate-900 font-bold px-3 py-1.5 rounded-lg shadow-lg">View Case Study</span>
+              </div>
+            </div>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h3 class="font-bold text-sm text-white group-hover:text-pink-300 transition">[Key Visual & Packaging System]</h3>
+                <p class="text-xs text-slate-400 mt-1">Placeholder description highlighting material exploration, physical packaging, and interactive 3D asset integration.</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-1.5 mt-3">
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-slate-300">Tool A</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-slate-300">Tool B</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-slate-300">Tool C</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Design Process Highlight -->
+        <div class="glass-panel p-5 rounded-2xl border border-white/5">
+          <h4 class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-compass-drafting text-pink-400"></i> My Visual Design Philosophy
+          </h4>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            I believe Graphic Design is the emotional bridge between complex software and human curiosity. Whether designing vector UI components or generating 3D procedural textures for game engines, my emphasis is on legible hierarchies, sharp contrast, and distinct visual personality.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. GAME DEV MODAL (With Playable Micro Game!) -->
+  <div id="games-modal" class="modal-wrapper fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div class="glass-panel max-w-4xl w-full max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-cyan-500/30 animate-scale-in">
+      <!-- Header -->
+      <div class="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-cyan-950/30 to-blue-950/20">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-gamepad"></i>
+          </div>
+          <div>
+            <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              Game Development Lab
+              <span class="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Live Micro-Demo</span>
+            </h2>
+            <p class="text-xs text-slate-400">Gameplay engineering, shader programming, mechanics prototypes & game jams.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('games-modal')" class="w-8 h-8 rounded-full glass-btn text-slate-400 hover:text-white flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 overflow-y-auto space-y-6">
+        
+        <!-- Live Playable Canvas Game -->
+        <div class="glass-panel p-4 rounded-2xl border border-cyan-500/40 bg-slate-950/60 relative">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+              <h4 class="text-xs font-mono font-bold text-cyan-300 uppercase">Interactive Arcade Sandbox: "Cyber Hopper 2088"</h4>
+            </div>
+            <div class="text-xs font-mono text-slate-400 flex items-center gap-3">
+              <span>Score: <strong id="game-score-display" class="text-white">0</strong></span>
+              <span>High: <strong id="game-highscore-display" class="text-amber-400">0</strong></span>
+            </div>
+          </div>
+
+          <!-- Game Canvas Container -->
+          <div class="relative w-full h-44 sm:h-52 bg-[#0a0f1d] rounded-xl overflow-hidden border border-cyan-500/20 flex items-center justify-center">
+            <canvas id="mini-game-canvas" class="w-full h-full block"></canvas>
+            
+            <!-- Start Overlay -->
+            <div id="game-start-overlay" class="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center gap-2">
+              <p class="text-xs text-cyan-200 font-mono">Press <kbd class="px-2 py-0.5 bg-white/20 rounded text-white font-bold">SPACE</kbd> or Tap to Jump over Firewalls</p>
+              <button onclick="startMiniGame()" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg transition transform active:scale-95">
+                <i class="fa-solid fa-play mr-1"></i> Start Game
+              </button>
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-2 flex items-center justify-between">
+            <span>Controls: Spacebar / Mouse Click / Screen Tap</span>
+            <span class="font-mono text-cyan-400/80">Built with 100% Native Canvas Physics</span>
+          </p>
+        </div>
+
+        <!-- Featured Titles Breakdown (Generic Placeholders) -->
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-laptop-code text-cyan-400"></i> Featured Titles & Mechanics Prototypes
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Game 1 Placeholder -->
+          <div class="glass-panel p-4 rounded-xl border border-white/5 space-y-2">
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-sm text-white">[Game Title 1 Placeholder]</h4>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300">Engine / Tech</span>
+            </div>
+            <p class="text-xs text-slate-300">
+              Placeholder summary for game mechanics prototype, core gameplay loop, architecture highlights, and player systems.
+            </p>
+            <div class="flex gap-2 pt-2">
+              <button onclick="showToast('Loading game preview placeholder...')" class="text-xs px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1">
+                <i class="fa-solid fa-play text-xs text-cyan-400"></i> Watch Trailer
+              </button>
+              <button onclick="showToast('GitHub repo link copied to clipboard!')" class="text-xs px-2.5 py-1 rounded glass-btn text-slate-300 hover:text-white transition flex items-center gap-1">
+                <i class="fa-brands fa-github text-xs"></i> View Code
+              </button>
+            </div>
+          </div>
+
+          <!-- Game 2 Placeholder -->
+          <div class="glass-panel p-4 rounded-xl border border-white/5 space-y-2">
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-sm text-white">[Game Title 2 Placeholder]</h4>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-300">Engine / Tech</span>
+            </div>
+            <p class="text-xs text-slate-300">
+              Placeholder overview for interactive mechanics, custom shader pipelines, procedural systems, and audio-reactive features.
+            </p>
+            <div class="flex gap-2 pt-2">
+              <button onclick="showToast('Devlog preview opened.')" class="text-xs px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-white transition flex items-center gap-1">
+                <i class="fa-solid fa-book-open text-xs text-purple-400"></i> Devlog Postmortem
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. MUSIC & SOUND DESIGN MODAL -->
+  <div id="audio-modal" class="modal-wrapper fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div class="glass-panel max-w-4xl w-full max-h-[90vh] rounded-3xl overflow-hidden flex flex-col border border-amber-500/30 animate-scale-in">
+      <!-- Header -->
+      <div class="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-amber-950/30 to-rose-950/20">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              Music Production & Sound Design
+              <span class="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Stem Mixer</span>
+            </h2>
+            <p class="text-xs text-slate-400">Synthesizer compositions, adaptive game audio, Foley, and spatial mixing.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('audio-modal')" class="w-8 h-8 rounded-full glass-btn text-slate-400 hover:text-white flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 overflow-y-auto space-y-6">
+        
+        <!-- Highly Visible Master BGM Control Banner in Audio Modal -->
+        <div class="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg shadow-amber-950/30">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 text-lg border border-amber-500/30">
+              <i class="fa-solid fa-radio"></i>
+            </div>
+            <div>
+              <div class="text-sm font-bold text-white flex items-center gap-2">
+                <span>Studio Audio Engine</span>
+                <span id="modal-audio-status-pill" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">MUTED</span>
+              </div>
+              <p class="text-xs text-slate-400">Toggle the studio background music synthesizer and live stem matrix.</p>
+            </div>
+          </div>
+          <button id="modal-audio-toggle-btn" onclick="toggleAudioEngine()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center gap-2 transition shadow-md active:scale-95">
+            <i id="modal-audio-icon" class="fa-solid fa-play"></i>
+            <span id="modal-audio-btn-text">Start Studio BGM</span>
+          </button>
+        </div>
+
+        <!-- Live Synthesizer / Stem Deck -->
+        <div class="glass-panel p-5 rounded-2xl border border-amber-500/30 bg-slate-950/60">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-compact-disc text-amber-400 animate-spin" style="animation-duration: 4s;"></i>
+              <h4 class="text-xs font-mono font-bold text-amber-300 uppercase">Real-Time WebAudio Stem Matrix</h4>
+            </div>
+            <span class="text-[11px] font-mono text-slate-400">120 BPM • F Minor Synthwave</span>
+          </div>
+
+          <!-- Live Visualizer Oscilloscope -->
+          <div class="h-20 bg-black/60 rounded-xl mb-4 overflow-hidden relative border border-white/5 flex items-center justify-center">
+            <canvas id="modal-visualizer-canvas" class="w-full h-full block"></canvas>
+            <div id="vis-placeholder" class="absolute text-xs text-slate-500 font-mono pointer-events-none">
+              Start Audio Playback to Activate Real-time FFT Waveform
+            </div>
+          </div>
+
+          <!-- Stems Toggle Channels -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button onclick="toggleAudioStem('drums')" id="stem-drums" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-amber-500/30 text-left transition">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-white">1. Drums / Beat</span>
+                <i class="fa-solid fa-drum text-amber-400 text-xs"></i>
+              </div>
+              <span id="stem-drums-status" class="text-[10px] font-mono text-emerald-400">ACTIVE</span>
+            </button>
+
+            <button onclick="toggleAudioStem('bass')" id="stem-bass" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-amber-500/30 text-left transition">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-white">2. Sub Bass</span>
+                <i class="fa-solid fa-wave-square text-amber-400 text-xs"></i>
+              </div>
+              <span id="stem-bass-status" class="text-[10px] font-mono text-emerald-400">ACTIVE</span>
+            </button>
+
+            <button onclick="toggleAudioStem('chords')" id="stem-chords" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-amber-500/30 text-left transition">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-white">3. Warm Pad</span>
+                <i class="fa-solid fa-water text-amber-400 text-xs"></i>
+              </div>
+              <span id="stem-chords-status" class="text-[10px] font-mono text-emerald-400">ACTIVE</span>
+            </button>
+
+            <button onclick="toggleAudioStem('lead')" id="stem-lead" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-amber-500/30 text-left transition">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-white">4. Arp Lead</span>
+                <i class="fa-solid fa-bolt text-amber-400 text-xs"></i>
+              </div>
+              <span id="stem-lead-status" class="text-[10px] font-mono text-emerald-400">ACTIVE</span>
+            </button>
+          </div>
+
+          <!-- Soundboard Piano / Synth Keys -->
+          <div class="mt-4 pt-4 border-t border-white/5">
+            <p class="text-[11px] text-slate-400 mb-2 font-mono">Interactive Synth Keyboard (Click to play notes):</p>
+            <div class="flex gap-1.5 justify-center sm:justify-start overflow-x-auto pb-1">
+              <button onmousedown="playSynthNote(220)" class="h-14 w-10 bg-white text-slate-900 rounded-b-lg font-bold text-[10px] flex items-end justify-center pb-1 active:bg-amber-300 shadow-md">A3</button>
+              <button onmousedown="playSynthNote(246.94)" class="h-14 w-10 bg-white text-slate-900 rounded-b-lg font-bold text-[10px] flex items-end justify-center pb-1 active:bg-amber-300 shadow-md">B3</button>
+              <button onmousedown="playSynthNote(261.63)" class="h-14 w-10 bg-white text-slate-900 rounded-b-lg font-bold text-[10px] flex items-end justify-center pb-1 active:bg-amber-300 shadow-md">C4</button>
+              <button onmousedown="playSynthNote(293.66)" class="h-14 w-10 bg-white text-slate-900 rounded-b-lg font-bold text-[10px] flex items-end justify-center pb-1 active:bg-amber-300 shadow-md">D4</button>
+              <button onmousedown="playSynthNote(329.63)" class="h-14 w-10 bg-white text-slate-900 rounded-b-lg font-bold text-[10px] flex items-end justify-center pb-1 active:bg-amber-300 shadow-md">E4</button>
+              <button onmousedown="playSynthNote(349.23)" class="h-14 w-10 bg-white text-slate-900 rounded-b-lg font-bold text-[10px] flex items-end justify-center pb-1 active:bg-amber-300 shadow-md">F4</button>
+              <button onmousedown="playSynthNote(392.00)" class="h-14 w-10 bg-white text-slate-900 rounded-b-lg font-bold text-[10px] flex items-end justify-center pb-1 active:bg-amber-300 shadow-md">G4</button>
+              <button onmousedown="playSynthNote(440.00)" class="h-14 w-10 bg-white text-slate-900 rounded-b-lg font-bold text-[10px] flex items-end justify-center pb-1 active:bg-amber-300 shadow-md">A4</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Discography / Soundtrack Portfolio (Generic Placeholders) -->
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-record-vinyl text-amber-400"></i> Released Soundtracks & Audio Credits
+        </h3>
+
+        <div class="space-y-3">
+          <div class="glass-panel p-3.5 rounded-xl border border-white/5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
+                01
+              </div>
+              <div>
+                <h4 class="text-sm font-bold text-white">[Soundtrack / Album Title Placeholder]</h4>
+                <p class="text-xs text-slate-400">Placeholder for score details, track count, genre, production software, and DAW environment.</p>
+              </div>
+            </div>
+            <button onclick="showToast('Playing audio sample placeholder...')" class="glass-btn px-3 py-1.5 rounded-lg text-xs text-amber-300 hover:text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-play text-[10px]"></i> Preview
+            </button>
+          </div>
+
+          <div class="glass-panel p-3.5 rounded-xl border border-white/5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
+                02
+              </div>
+              <div>
+                <h4 class="text-sm font-bold text-white">[Sound Effects & Audio Design Pack Placeholder]</h4>
+                <p class="text-xs text-slate-400">Placeholder for modular sound design library, interactive Foley cues, and spatial audio assets.</p>
+              </div>
+            </div>
+            <button onclick="showToast('Previewing SFX sample reel placeholder...')" class="glass-btn px-3 py-1.5 rounded-lg text-xs text-amber-300 hover:text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-play text-[10px]"></i> Preview
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. RECRUITER MODE / FAST RESUME MODAL (Usability Guardrail) -->
+  <div id="resume-modal" class="modal-wrapper fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div class="glass-panel max-w-3xl w-full max-h-[92vh] rounded-3xl overflow-hidden flex flex-col border border-purple-500/40 animate-scale-in">
+      
+      <!-- Top banner -->
+      <div class="p-6 border-b border-white/10 bg-gradient-to-r from-purple-900/40 via-slate-900 to-cyan-950/40 flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-2xl font-bold text-white tracking-tight">Remington Lee</h2>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Open to Roles</span>
+          </div>
+          <p class="text-sm text-purple-300 mt-0.5">Multidisciplinary Creative Technologist & Game Designer</p>
+          <p class="text-xs text-slate-400 mt-1 flex flex-wrap gap-4">
+            <span><i class="fa-solid fa-location-dot text-cyan-400 mr-1"></i> Seattle, WA / Remote</span>
+            <span><i class="fa-solid fa-envelope text-purple-400 mr-1"></i> remington.lee@example.com</span>
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="triggerResumeConfetti()" class="glass-btn px-3 py-1.5 rounded-xl text-xs font-medium text-purple-300 hover:text-white flex items-center gap-1.5">
+            <i class="fa-solid fa-download"></i> Save PDF
+          </button>
+          <button onclick="closeModal('resume-modal')" class="w-8 h-8 rounded-full glass-btn text-slate-400 hover:text-white flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Scan Content for Busy Recruiters -->
+      <div class="p-6 overflow-y-auto space-y-6 text-slate-300 text-xs sm:text-sm">
+        
+        <!-- Summary Box -->
+        <div class="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 leading-relaxed text-slate-200">
+          <strong>Summary:</strong> Creative developer with cross-disciplinary expertise at the intersection of <strong>graphic communication</strong>, <strong>interactive gameplay programming</strong>, and <strong>sound design</strong>. Proven track record building high-engagement interactive media, immersive WebGL environments, and indie titles.
+        </div>
+
+        <!-- Skills Matrix -->
+        <div>
+          <h3 class="font-bold text-white text-sm uppercase tracking-wider font-mono mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-layer-group text-purple-400"></i> Core Competencies & Toolchain
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="glass-panel p-3.5 rounded-xl border border-white/5 space-y-1.5">
+              <h4 class="font-bold text-pink-300 text-xs">Graphic & 3D Design</h4>
+              <p class="text-xs text-slate-400">Figma, Adobe CC, Blender, Typography, Design Systems, Motion Graphics.</p>
+            </div>
+            <div class="glass-panel p-3.5 rounded-xl border border-white/5 space-y-1.5">
+              <h4 class="font-bold text-cyan-300 text-xs">Game & Tech Dev</h4>
+              <p class="text-xs text-slate-400">Unity (C#), Godot, JavaScript/TypeScript, Three.js, GLSL Shaders, WebGL.</p>
+            </div>
+            <div class="glass-panel p-3.5 rounded-xl border border-white/5 space-y-1.5">
+              <h4 class="font-bold text-amber-300 text-xs">Audio & Composition</h4>
+              <p class="text-xs text-slate-400">Ableton Live, Web Audio API, FMOD, Synthesizers, Spatial Audio, Foley.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Experience Timeline (Generic Placeholders) -->
+        <div>
+          <h3 class="font-bold text-white text-sm uppercase tracking-wider font-mono mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-briefcase text-cyan-400"></i> Work Experience
+          </h3>
+          <div class="space-y-4 border-l-2 border-purple-500/30 pl-4 ml-1">
+            <div class="relative">
+              <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-white text-sm">[Current Role / Senior Interactive Position]</h4>
+                <span class="text-xs font-mono text-purple-300">2023 — Present</span>
+              </div>
+              <p class="text-xs text-cyan-300">[Company Name / Studio Placeholder] • Seattle, WA / Remote</p>
+              <p class="text-xs text-slate-400 mt-1">Placeholder description for design direction, interactive WebGL prototypes, and multimedia production leadership.</p>
+            </div>
+
+            <div class="relative">
+              <span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+              <div class="flex items-center justify-between">
+                <h4 class="font-bold text-white text-sm">[Prior Technical / Game Development Role]</h4>
+                <span class="text-xs font-mono text-slate-400">2021 — 2023</span>
+              </div>
+              <p class="text-xs text-cyan-300">[Previous Company / Studio Placeholder] • Seattle, WA</p>
+              <p class="text-xs text-slate-400 mt-1">Placeholder overview for technical art pipelines, gameplay shaders, UI systems, and interactive sound design integration.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+          <button onclick="copyContactEmail()" class="glass-btn px-4 py-2 rounded-xl text-xs font-medium text-white flex items-center gap-2">
+            <i class="fa-regular fa-copy text-cyan-400"></i> Copy Email Address
+          </button>
+          <button onclick="closeModal('resume-modal'); openModal('contact-modal');" class="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition">
+            Schedule a 15-Min Intro Chat
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. CONTACT MODAL -->
+  <div id="contact-modal" class="modal-wrapper fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 sm:p-6">
+    <div class="glass-panel max-w-md w-full rounded-3xl p-6 border border-cyan-500/30 animate-scale-in">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane text-cyan-400"></i> Get In Touch
+        </h3>
+        <button onclick="closeModal('contact-modal')" class="w-8 h-8 rounded-full glass-btn text-slate-400 hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">Have an exciting game project, design system, or music score inquiry? Send a message to Remington in Seattle, WA!</p>
+      
+      <form onsubmit="handleContactSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-mono text-slate-300 uppercase mb-1">Your Name</label>
+          <input type="text" required placeholder="Jane Doe" class="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-slate-300 uppercase mb-1">Email</label>
+          <input type="email" required placeholder="jane@company.com" class="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-slate-300 uppercase mb-1">Message</label>
+          <textarea rows="3" required placeholder="Hey Remington, let's collaborate on..." class="w-full bg-slate-900/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold text-xs rounded-xl shadow-lg transition">
+          Send Message
+        </button>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    /* ==========================================================
+       1. GLOBAL STATE & CAMERA TARGETS
+       ========================================================== */
+    let scene, camera, renderer, raycaster, mouse;
+    let interactiveObjects = [];
+    let hoveredObject = null;
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+    
+    // Dynamic 3D Studio Speakers for bass throb
+    let leftSpeakerCone, rightSpeakerCone;
+    let vinylMesh;
+
+    // Camera preset positions for dynamic viewing
+    const cameraPresets = {
+      overview: {
+        position: new THREE.Vector3(12, 10, 14),
+        target: new THREE.Vector3(0, 1.5, 0)
+      },
+      design: {
+        position: new THREE.Vector3(-4, 5, 8),
+        target: new THREE.Vector3(-4.5, 4.5, -3.5)
+      },
+      games: {
+        position: new THREE.Vector3(4.5, 4.5, 6),
+        target: new THREE.Vector3(2.5, 3.2, 0.5)
+      },
+      audio: {
+        position: new THREE.Vector3(7, 4.5, 5),
+        target: new THREE.Vector3(4.8, 3.0, -2.5)
+      }
+    };
+
+    let currentCameraTarget = new THREE.Vector3().copy(cameraPresets.overview.target);
+    let desiredCameraPos = new THREE.Vector3().copy(cameraPresets.overview.position);
+    let desiredCameraTarget = new THREE.Vector3().copy(cameraPresets.overview.target);
+
+    // 3D Hotspot positions mapped to world coordinates
+    const hotspots = [
+      { id: 'design-hotspot', name: '🎨 Graphic Design Wall', view: 'design', modal: 'design-modal', pos: new THREE.Vector3(-4.5, 5.2, -3.8) },
+      { id: 'games-hotspot', name: '🕹️ Game Dev Station', view: 'games', modal: 'games-modal', pos: new THREE.Vector3(2.2, 4.2, 0.8) },
+      { id: 'audio-hotspot', name: '🎵 Music & Synth Deck', view: 'audio', modal: 'audio-modal', pos: new THREE.Vector3(4.8, 4.0, -2.5) }
+    ];
+
+    /* ==========================================================
+       2. THREE.JS 3D DIORAMA ROOM GENERATION
+       ========================================================== */
+    function initThreeScene() {
+      const container = document.getElementById('webgl-container');
+      
+      // Scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color('#080b11');
+      scene.fog = new THREE.FogExp2('#080b11', 0.035);
+
+      // Camera
+      camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.copy(cameraPresets.overview.position);
+      camera.lookAt(currentCameraTarget);
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
+      // Lighting Setup
+      setupLighting();
+
+      // Procedural Studio Room Mesh Construction
+      buildStudioRoom();
+
+      // Create Floating 3D HTML Hotspots
+      createHotspotBadges();
+
+      // Setup Event Listeners
+      setupInteractionEvents();
+    }
+
+    function setupLighting() {
+      // Ambient Soft Studio Light
+      const ambientLight = new THREE.AmbientLight(0x1e293b, 1.2);
+      scene.add(ambientLight);
+
+      // Main Soft Sun / Key light
+      const mainLight = new THREE.DirectionalLight(0xe2e8f0, 1.8);
+      mainLight.position.set(10, 16, 12);
+      mainLight.castShadow = true;
+      mainLight.shadow.mapSize.width = 1024;
+      mainLight.shadow.mapSize.height = 1024;
+      mainLight.shadow.bias = -0.0005;
+      scene.add(mainLight);
+
+      // Graphic Design Neon Wall Point Light (Pink glow)
+      const pinkPoint = new THREE.PointLight(0xec4899, 2.5, 12);
+      pinkPoint.position.set(-4, 5, -2);
+      scene.add(pinkPoint);
+
+      // Game Dev Cyber Monitor Light (Cyan glow)
+      const cyanPoint = new THREE.PointLight(0x06b6d4, 2.8, 10);
+      cyanPoint.position.set(2.2, 3.5, 0.8);
+      scene.add(cyanPoint);
+
+      // Audio Station Warm Vintage Light (Amber glow)
+      const amberPoint = new THREE.PointLight(0xf59e0b, 2.2, 10);
+      amberPoint.position.set(4.8, 3.6, -2.5);
+      scene.add(amberPoint);
+    }
+
+    // Procedural Floor Grid Texture Generator
+    function createTileTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 512, 512);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 4;
+      const step = 64;
+      for (let x = 0; x <= 512; x += step) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 512);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= 512; y += step) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(512, y);
+        ctx.stroke();
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(4, 4);
+      return texture;
+    }
+
+    function buildStudioRoom() {
+      const roomGroup = new THREE.Group();
+
+      // 1. FLOOR
+      const floorGeo = new THREE.BoxGeometry(16, 0.4, 16);
+      const floorMat = new THREE.MeshStandardMaterial({
+        color: 0x111827,
+        roughness: 0.3,
+        metalness: 0.2,
+        map: createTileTexture()
+      });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.position.y = -0.2;
+      floor.receiveShadow = true;
+      roomGroup.add(floor);
+
+      // 2. BACK WALL (Design & Art Area)
+      const backWallGeo = new THREE.BoxGeometry(16, 10, 0.4);
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+      const backWall = new THREE.Mesh(backWallGeo, wallMat);
+      backWall.position.set(0, 5, -8);
+      backWall.receiveShadow = true;
+      roomGroup.add(backWall);
+
+      // 3. LEFT WALL
+      const leftWallGeo = new THREE.BoxGeometry(0.4, 10, 16);
+      const leftWall = new THREE.Mesh(leftWallGeo, wallMat);
+      leftWall.position.set(-8, 5, 0);
+      leftWall.receiveShadow = true;
+      roomGroup.add(leftWall);
+
+      // ==========================================
+      // STATION A: GRAPHIC DESIGN WALL (Frames & Neon)
+      // ==========================================
+      const designGroup = new THREE.Group();
+      designGroup.userData = { type: 'design', modal: 'design-modal', name: 'Graphic Design Gallery' };
+
+      // Poster Frame 1 (Big center artwork)
+      const frame1Geo = new THREE.BoxGeometry(3.6, 4.4, 0.15);
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.2, metalness: 0.8 });
+      const frame1 = new THREE.Mesh(frame1Geo, frameMat);
+      frame1.position.set(-4.5, 5.2, -7.7);
+
+      // Glowing canvas inside frame
+      const canvas1Geo = new THREE.PlaneGeometry(3.2, 4.0);
+      const canvas1Mat = new THREE.MeshBasicMaterial({ color: 0xec4899 });
+      const canvas1 = new THREE.Mesh(canvas1Geo, canvas1Mat);
+      canvas1.position.set(-4.5, 5.2, -7.6);
+      designGroup.add(frame1, canvas1);
+
+      // Poster Frame 2 (Smaller side poster)
+      const frame2Geo = new THREE.BoxGeometry(2.0, 2.6, 0.15);
+      const frame2 = new THREE.Mesh(frame2Geo, frameMat);
+      frame2.position.set(-1.0, 6.0, -7.7);
+
+      const canvas2Geo = new THREE.PlaneGeometry(1.7, 2.3);
+      const canvas2Mat = new THREE.MeshBasicMaterial({ color: 0x8b5cf6 });
+      const canvas2 = new THREE.Mesh(canvas2Geo, canvas2Mat);
+      canvas2.position.set(-1.0, 6.0, -7.6);
+      designGroup.add(frame2, canvas2);
+
+      // Neon "DESIGN STUDIO" sign on wall
+      const neonBarGeo = new THREE.BoxGeometry(3.0, 0.1, 0.1);
+      const neonBarMat = new THREE.MeshBasicMaterial({ color: 0xf472b6 });
+      const neonBar = new THREE.Mesh(neonBarGeo, neonBarMat);
+      neonBar.position.set(-4.5, 7.8, -7.7);
+      designGroup.add(neonBar);
+
+      interactiveObjects.push(designGroup);
+      roomGroup.add(designGroup);
+
+      // ==========================================
+      // STATION B: GAME DEV BATTLESTATION (Desk, Dual PC Monitors)
+      // ==========================================
+      const gameGroup = new THREE.Group();
+      gameGroup.userData = { type: 'games', modal: 'games-modal', name: 'Game Dev Rig' };
+
+      // Wooden Desk
+      const deskTopGeo = new THREE.BoxGeometry(5.5, 0.2, 2.6);
+      const woodMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 });
+      const deskTop = new THREE.Mesh(deskTopGeo, woodMat);
+      deskTop.position.set(2.5, 2.2, 0.5);
+      deskTop.castShadow = true;
+      deskTop.receiveShadow = true;
+      gameGroup.add(deskTop);
+
+      // Desk Metal Legs
+      const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.2);
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 });
+      const l1 = new THREE.Mesh(legGeo, legMat); l1.position.set(0.1, 1.1, -0.6);
+      const l2 = new THREE.Mesh(legGeo, legMat); l2.position.set(4.9, 1.1, -0.6);
+      const l3 = new THREE.Mesh(legGeo, legMat); l3.position.set(0.1, 1.1, 1.6);
+      const l4 = new THREE.Mesh(legGeo, legMat); l4.position.set(4.9, 1.1, 1.6);
+      gameGroup.add(l1, l2, l3, l4);
+
+      // Main Curved Ultrawide Monitor
+      const monitorBaseGeo = new THREE.BoxGeometry(0.8, 0.05, 0.4);
+      const standGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.8);
+      const screenGeo = new THREE.BoxGeometry(2.4, 1.3, 0.1);
+      const monitorMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.2 });
+      
+      const monBase = new THREE.Mesh(monitorBaseGeo, monitorMat); monBase.position.set(2.2, 2.32, 0.5);
+      const monStand = new THREE.Mesh(standGeo, monitorMat); monStand.position.set(2.2, 2.7, 0.5);
+      const monScreen = new THREE.Mesh(screenGeo, monitorMat); monScreen.position.set(2.2, 3.3, 0.5);
+      monScreen.castShadow = true;
+
+      // Glowing Code/Game Display
+      const displayGeo = new THREE.PlaneGeometry(2.28, 1.18);
+      const displayMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+      const display = new THREE.Mesh(displayGeo, displayMat);
+      display.position.set(2.2, 3.3, 0.56);
+      gameGroup.add(monBase, monStand, monScreen, display);
+
+      // Desktop Gaming Tower with RGB glass
+      const pcGeo = new THREE.BoxGeometry(0.8, 1.4, 1.4);
+      const pcMat = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.2 });
+      const pcTower = new THREE.Mesh(pcGeo, pcMat);
+      pcTower.position.set(4.6, 2.9, 0.5);
+      
+      const pcLedGeo = new THREE.PlaneGeometry(0.05, 1.2);
+      const pcLedMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
+      const pcLed = new THREE.Mesh(pcLedGeo, pcLedMat);
+      pcLed.position.set(4.19, 2.9, 0.5);
+      pcLed.rotation.y = -Math.PI / 2;
+      gameGroup.add(pcTower, pcLed);
+
+      // Arcade Fightstick Controller
+      const stickBaseGeo = new THREE.BoxGeometry(0.8, 0.12, 0.5);
+      const stickBaseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+      const stickBase = new THREE.Mesh(stickBaseGeo, stickBaseMat);
+      stickBase.position.set(1.3, 2.36, 1.0);
+      gameGroup.add(stickBase);
+
+      interactiveObjects.push(gameGroup);
+      roomGroup.add(gameGroup);
+
+      // ==========================================
+      // STATION C: MUSIC & SYNTHESIZER STATION
+      // ==========================================
+      const audioGroup = new THREE.Group();
+      audioGroup.userData = { type: 'audio', modal: 'audio-modal', name: 'Music Production Rack' };
+
+      // Synth Rack Desk Stand
+      const synthTableGeo = new THREE.BoxGeometry(3.6, 0.15, 2.0);
+      const synthTable = new THREE.Mesh(synthTableGeo, woodMat);
+      synthTable.position.set(5.2, 2.0, -3.2);
+      audioGroup.add(synthTable);
+
+      // Turntable DJ Deck
+      const ttBaseGeo = new THREE.BoxGeometry(1.2, 0.15, 1.0);
+      const ttMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.7, roughness: 0.3 });
+      const ttBase = new THREE.Mesh(ttBaseGeo, ttMat);
+      ttBase.position.set(4.2, 2.15, -3.2);
+      
+      // Vinyl Record
+      const vinylGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.03, 32);
+      const vinylMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.1, metalness: 0.9 });
+      vinylMesh = new THREE.Mesh(vinylGeo, vinylMat);
+      vinylMesh.position.set(4.2, 2.25, -3.2);
+      
+      // Center Vinyl Label
+      const labelGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.035, 16);
+      const labelMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+      const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+      labelMesh.position.set(4.2, 2.25, -3.2);
+      audioGroup.add(ttBase, vinylMesh, labelMesh);
+
+      // Midi Keyboard / Synthesizer
+      const synthGeo = new THREE.BoxGeometry(1.8, 0.12, 0.7);
+      const synthMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.4 });
+      const synth = new THREE.Mesh(synthGeo, synthMat);
+      synth.position.set(5.8, 2.15, -3.2);
+      audioGroup.add(synth);
+
+      // Left Studio Monitor Speaker
+      const speakerGeo = new THREE.BoxGeometry(0.6, 1.0, 0.6);
+      const speakerMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.3 });
+      const leftSpeaker = new THREE.Mesh(speakerGeo, speakerMat);
+      leftSpeaker.position.set(3.8, 3.2, -4.5);
+      
+      const coneGeo = new THREE.CylinderGeometry(0.18, 0.12, 0.05, 16);
+      const coneMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+      leftSpeakerCone = new THREE.Mesh(coneGeo, coneMat);
+      leftSpeakerCone.rotation.x = Math.PI / 2;
+      leftSpeakerCone.position.set(3.8, 3.1, -4.2);
+
+      // Right Studio Monitor Speaker
+      const rightSpeaker = new THREE.Mesh(speakerGeo, speakerMat);
+      rightSpeaker.position.set(6.4, 3.2, -4.5);
+      rightSpeakerCone = new THREE.Mesh(coneGeo, coneMat);
+      rightSpeakerCone.rotation.x = Math.PI / 2;
+      rightSpeakerCone.position.set(6.4, 3.1, -4.2);
+
+      audioGroup.add(leftSpeaker, leftSpeakerCone, rightSpeaker, rightSpeakerCone);
+
+      interactiveObjects.push(audioGroup);
+      roomGroup.add(audioGroup);
+
+      // Decorative Cozy Plants
+      const potGeo = new THREE.CylinderGeometry(0.3, 0.2, 0.5);
+      const potMat = new THREE.MeshStandardMaterial({ color: 0x475569 });
+      const pot = new THREE.Mesh(potGeo, potMat);
+      pot.position.set(-6.5, 0.25, -6.5);
+      
+      const leafGeo = new THREE.DodecahedronGeometry(0.45);
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.8 });
+      const plant = new THREE.Mesh(leafGeo, leafMat);
+      plant.position.set(-6.5, 0.7, -6.5);
+      roomGroup.add(pot, plant);
+
+      scene.add(roomGroup);
+    }
+
+    /* ==========================================================
+       3. 3D HTML HOTSPOT BADGES & PROJECTION
+       ========================================================== */
+    function createHotspotBadges() {
+      const container = document.getElementById('hotspots-overlay');
+      container.innerHTML = '';
+
+      hotspots.forEach(spot => {
+        const badge = document.createElement('div');
+        badge.id = spot.id;
+        badge.className = 'hotspot-badge glass-panel px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 border border-white/20 text-white shadow-xl hover:border-cyan-400 group';
+        badge.innerHTML = `
+          <span>${spot.name}</span>
+          <i class="fa-solid fa-arrow-right text-[10px] text-cyan-300 group-hover:translate-x-0.5 transition"></i>
+        `;
+        badge.onclick = (e) => {
+          e.stopPropagation();
+          setCameraView(spot.view);
+          setTimeout(() => { openModal(spot.modal); }, 600);
+        };
+        container.appendChild(badge);
+      });
+    }
+
+    function updateHotspotsProjection() {
+      hotspots.forEach(spot => {
+        const el = document.getElementById(spot.id);
+        if (!el) return;
+
+        // Project 3D vector to 2D Screen coords
+        const v = spot.pos.clone().project(camera);
+
+        // Check if behind camera
+        if (v.z > 1) {
+          el.style.display = 'none';
+          return;
+        }
+
+        const x = (v.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(v.y * 0.5) + 0.5) * window.innerHeight;
+
+        el.style.display = 'flex';
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+      });
+    }
+
+    /* ==========================================================
+       4. INTERACTION & CAMERA SMOOTH LERP ENGINE
+       ========================================================== */
+    function setupInteractionEvents() {
+      const dom = renderer.domElement;
+
+      // Mouse drag rotation / orbit
+      dom.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        previousMousePosition = { x: e.clientX, y: e.clientY };
+      });
+
+      window.addEventListener('mouseup', () => { isDragging = false; });
+
+      dom.addEventListener('mousemove', (e) => {
+        // Track mouse normalized for raycaster
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+        if (isDragging) {
+          const deltaX = e.clientX - previousMousePosition.x;
+          const deltaY = e.clientY - previousMousePosition.y;
+
+          // Gentle camera orbit around target
+          const angle = deltaX * 0.005;
+          desiredCameraPos.x = desiredCameraPos.x * Math.cos(angle) - desiredCameraPos.z * Math.sin(angle);
+          desiredCameraPos.z = desiredCameraPos.x * Math.sin(angle) + desiredCameraPos.z * Math.cos(angle);
+          desiredCameraPos.y = Math.max(2, Math.min(18, desiredCameraPos.y + deltaY * 0.02));
+
+          previousMousePosition = { x: e.clientX, y: e.clientY };
+        }
+      });
+
+      // Mouse wheel zoom
+      dom.addEventListener('wheel', (e) => {
+        const zoomSpeed = 0.005;
+        const dir = new THREE.Vector3().subVectors(desiredCameraPos, desiredCameraTarget).normalize();
+        const dist = desiredCameraPos.distanceTo(desiredCameraTarget);
+
+        if ((dist > 5 && e.deltaY < 0) || (dist < 26 && e.deltaY > 0)) {
+          desiredCameraPos.addScaledVector(dir, e.deltaY * zoomSpeed);
+        }
+      });
+
+      // Touch Events for Mobile Orbit
+      dom.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      });
+
+      dom.addEventListener('touchmove', (e) => {
+        if (isDragging && e.touches.length === 1) {
+          const deltaX = e.touches[0].clientX - previousMousePosition.x;
+          const deltaY = e.touches[0].clientY - previousMousePosition.y;
+
+          const angle = deltaX * 0.006;
+          desiredCameraPos.x = desiredCameraPos.x * Math.cos(angle) - desiredCameraPos.z * Math.sin(angle);
+          desiredCameraPos.z = desiredCameraPos.x * Math.sin(angle) + desiredCameraPos.z * Math.cos(angle);
+          desiredCameraPos.y = Math.max(2, Math.min(18, desiredCameraPos.y + deltaY * 0.02));
+
+          previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+      });
+
+      dom.addEventListener('touchend', () => { isDragging = false; });
+
+      // Click raycaster on 3D objects
+      dom.addEventListener('click', () => {
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+        if (intersects.length > 0) {
+          let topParent = intersects[0].object;
+          while (topParent.parent && !topParent.userData.type) {
+            topParent = topParent.parent;
+          }
+
+          if (topParent.userData.type) {
+            setCameraView(topParent.userData.type);
+            setTimeout(() => {
+              openModal(topParent.userData.modal);
+            }, 550);
+          }
+        }
+      });
+
+      // Window Resize Listener
+      window.addEventListener('resize', onWindowResize);
+
+      // Global Keydown shortcuts
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllModals();
+        if (e.key === '1') setCameraView('overview');
+        if (e.key === '2') setCameraView('design');
+        if (e.key === '3') setCameraView('games');
+        if (e.key === '4') setCameraView('audio');
+      });
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function setCameraView(viewKey) {
+      const preset = cameraPresets[viewKey];
+      if (!preset) return;
+
+      desiredCameraPos.copy(preset.position);
+      desiredCameraTarget.copy(preset.target);
+
+      // Update Nav pill active state
+      document.querySelectorAll('.nav-pill').forEach(btn => {
+        btn.classList.remove('bg-white/10', 'text-white');
+        btn.classList.add('text-slate-300');
+      });
+      const activeBtn = document.getElementById(`nav-${viewKey}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-white/10', 'text-white');
+        activeBtn.classList.remove('text-slate-300');
+      }
+    }
+
+    /* ==========================================================
+       5. WEB AUDIO API SYNTHESIZER & STEM ENGINE
+       ========================================================== */
+    let audioCtx = null;
+    let isAudioPlaying = false;
+    let audioInterval = null;
+    let stepCount = 0;
+    let analyser = null;
+
+    const stemState = {
+      drums: true,
+      bass: true,
+      chords: true,
+      lead: true
+    };
+
+    function initAudioEngine() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        analyser.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function toggleAudioEngine() {
+      initAudioEngine();
+      isAudioPlaying = !isAudioPlaying;
+
+      // Main HUD Elements
+      const ping = document.getElementById('audio-ping');
+      const dot = document.getElementById('audio-dot');
+      const text = document.getElementById('audio-text');
+      const icon = document.getElementById('audio-icon');
+
+      // Audio Modal Elements
+      const modalBtnText = document.getElementById('modal-audio-btn-text');
+      const modalIcon = document.getElementById('modal-audio-icon');
+      const modalPill = document.getElementById('modal-audio-status-pill');
+
+      if (isAudioPlaying) {
+        if (ping) ping.classList.remove('hidden');
+        if (dot) {
+          dot.classList.add('bg-cyan-400');
+          dot.classList.remove('bg-slate-500');
+        }
+        if (text) text.innerHTML = 'Studio BGM: <strong class="text-cyan-300">Playing</strong>';
+        if (icon) icon.className = 'fa-solid fa-volume-high text-cyan-400';
+
+        if (modalBtnText) modalBtnText.textContent = 'Mute Studio BGM';
+        if (modalIcon) modalIcon.className = 'fa-solid fa-pause';
+        if (modalPill) {
+          modalPill.textContent = 'PLAYING';
+          modalPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+        }
+
+        startGenerativeBeat();
+        showToast('Synth BGM activated! Stems running.');
+      } else {
+        if (ping) ping.classList.add('hidden');
+        if (dot) {
+          dot.classList.remove('bg-cyan-400');
+          dot.classList.add('bg-slate-500');
+        }
+        if (text) text.innerHTML = 'Studio BGM: <strong class="text-slate-400">Muted</strong>';
+        if (icon) icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+
+        if (modalBtnText) modalBtnText.textContent = 'Start Studio BGM';
+        if (modalIcon) modalIcon.className = 'fa-solid fa-play';
+        if (modalPill) {
+          modalPill.textContent = 'MUTED';
+          modalPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700';
+        }
+
+        clearInterval(audioInterval);
+      }
+    }
+
+    function startGenerativeBeat() {
+      clearInterval(audioInterval);
+      const tempoMs = 140; // ~107 BPM 16th step loop
+
+      const bassNotes = [110, 110, 130.81, 146.83, 98, 98, 110, 123.47];
+      const arpNotes = [440, 523.25, 659.25, 783.99, 659.25, 523.25, 440, 392];
+
+      audioInterval = setInterval(() => {
+        if (!isAudioPlaying) return;
+
+        const currentStep = stepCount % 16;
+
+        // 1. Synthesized Kick & Snare
+        if (stemState.drums) {
+          if (currentStep === 0 || currentStep === 8 || currentStep === 10) {
+            triggerKick();
+          }
+          if (currentStep === 4 || currentStep === 12) {
+            triggerSnare();
+          }
+        }
+
+        // 2. Synthesized Sub Bass
+        if (stemState.bass && currentStep % 2 === 0) {
+          const noteIndex = Math.floor(currentStep / 2) % bassNotes.length;
+          triggerTone(bassNotes[noteIndex], 'sawtooth', 0.18, 0.18);
+        }
+
+        // 3. Arpeggiator Lead
+        if (stemState.lead && currentStep % 2 === 1) {
+          const noteIndex = Math.floor(currentStep / 2) % arpNotes.length;
+          triggerTone(arpNotes[noteIndex], 'square', 0.08, 0.08);
+        }
+
+        stepCount++;
+      }, tempoMs);
+    }
+
+    function triggerKick() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(32, audioCtx.currentTime + 0.12);
+
+      gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+      osc.connect(gain);
+      gain.connect(analyser);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.16);
+    }
+
+    function triggerSnare() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+      osc.connect(gain);
+      gain.connect(analyser);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function triggerTone(freq, type, duration, volume) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+
+      filter.type = 'lowpass';
+      filter.frequency.value = 1600;
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(analyser);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playSynthNote(freq) {
+      initAudioEngine();
+      triggerTone(freq, 'sawtooth', 0.5, 0.25);
+    }
+
+    function toggleAudioStem(stemKey) {
+      stemState[stemKey] = !stemState[stemKey];
+      const statusEl = document.getElementById(`stem-${stemKey}-status`);
+      const btnEl = document.getElementById(`stem-${stemKey}`);
+
+      if (stemState[stemKey]) {
+        statusEl.textContent = 'ACTIVE';
+        statusEl.className = 'text-[10px] font-mono text-emerald-400';
+        btnEl.classList.add('border-amber-500/30');
+      } else {
+        statusEl.textContent = 'MUTED';
+        statusEl.className = 'text-[10px] font-mono text-slate-500';
+        btnEl.classList.remove('border-amber-500/30');
+      }
+    }
+
+    /* ==========================================================
+       6. EMBEDDED MINI-GAME: "CYBER HOPPER"
+       ========================================================== */
+    let gameRunning = false;
+    let gameScore = 0;
+    let gameHighScore = 0;
+    let player = { x: 50, y: 120, vy: 0, w: 20, h: 20, jumping: false };
+    let obstacles = [];
+    let gameAnimFrame = null;
+    let lastObstacleTime = 0;
+
+    function initMiniGameCanvas() {
+      const canvas = document.getElementById('mini-game-canvas');
+      if (!canvas) return;
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#06b6d4';
+      ctx.font = '12px JetBrains Mono';
+      ctx.fillText('Press "Start Game" to launch micro-runner', 20, canvas.height / 2);
+
+      // Event listeners for jump
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && gameRunning) {
+          jumpPlayer();
+          e.preventDefault();
+        }
+      });
+      canvas.addEventListener('click', () => {
+        if (gameRunning) jumpPlayer();
+      });
+    }
+
+    function startMiniGame() {
+      const overlay = document.getElementById('game-start-overlay');
+      if (overlay) overlay.style.display = 'none';
+
+      const canvas = document.getElementById('mini-game-canvas');
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+
+      gameRunning = true;
+      gameScore = 0;
+      obstacles = [];
+      player.y = canvas.height - 40;
+      player.vy = 0;
+      player.jumping = false;
+
+      updateGameScoreDisplay();
+      gameLoop();
+    }
+
+    function jumpPlayer() {
+      if (!player.jumping) {
+        player.vy = -8.5;
+        player.jumping = true;
+        playSynthNote(520);
+      }
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+
+      const canvas = document.getElementById('mini-game-canvas');
+      const ctx = canvas.getContext('2d');
+      const groundY = canvas.height - 24;
+
+      // Update Player Physics
+      player.vy += 0.42; // Gravity
+      player.y += player.vy;
+
+      if (player.y >= groundY - player.h) {
+        player.y = groundY - player.h;
+        player.vy = 0;
+        player.jumping = false;
+      }
+
+      // Spawn Obstacles
+      if (Date.now() - lastObstacleTime > 1300 + Math.random() * 900) {
+        obstacles.push({
+          x: canvas.width + 20,
+          y: groundY - 26,
+          w: 16,
+          h: 26,
+          speed: 4 + Math.min(gameScore * 0.05, 5)
+        });
+        lastObstacleTime = Date.now();
+      }
+
+      // Update Obstacles & Collision Check
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.x -= obs.speed;
+
+        // AABB Collision Box
+        if (
+          player.x < obs.x + obs.w &&
+          player.x + player.w > obs.x &&
+          player.y < obs.y + obs.h &&
+          player.y + player.h > obs.y
+        ) {
+          // Game Over!
+          gameOverMiniGame();
+          return;
+        }
+
+        // Passed obstacle
+        if (obs.x + obs.w < 0) {
+          obstacles.splice(i, 1);
+          gameScore += 10;
+          updateGameScoreDisplay();
+        }
+      }
+
+      // Render Frame
+      ctx.fillStyle = '#060a12';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Grid Ground
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(canvas.width, groundY);
+      ctx.stroke();
+
+      // Draw Player (Neon Cyan Box)
+      ctx.fillStyle = '#06b6d4';
+      ctx.shadowColor = '#06b6d4';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+
+      // Draw Obstacles (Pink Glitch Towers)
+      ctx.fillStyle = '#ec4899';
+      ctx.shadowColor = '#ec4899';
+      ctx.shadowBlur = 8;
+      obstacles.forEach(obs => {
+        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+      });
+
+      ctx.shadowBlur = 0; // Reset blur
+
+      gameAnimFrame = requestAnimationFrame(gameLoop);
+    }
+
+    function gameOverMiniGame() {
+      gameRunning = false;
+      cancelAnimationFrame(gameAnimFrame);
+
+      if (gameScore > gameHighScore) {
+        gameHighScore = gameScore;
+      }
+      updateGameScoreDisplay();
+
+      const overlay = document.getElementById('game-start-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.innerHTML = `
+          <p class="text-xs text-rose-400 font-bold font-mono">GLITCH COLLISION! Score: ${gameScore}</p>
+          <button onclick="startMiniGame()" class="px-4 py-1.5 bg-cyan-500 text-white font-bold text-xs rounded-xl shadow-lg mt-1">
+            <i class="fa-solid fa-rotate-right mr-1"></i> Play Again
+          </button>
+        `;
+      }
+      playSynthNote(130);
+    }
+
+    function updateGameScoreDisplay() {
+      const cur = document.getElementById('game-score-display');
+      const high = document.getElementById('game-highscore-display');
+      if (cur) cur.textContent = gameScore;
+      if (high) high.textContent = gameHighScore;
+    }
+
+    /* ==========================================================
+       7. UI MODAL MANAGEMENT & HELPERS
+       ========================================================== */
+    function openModal(modalId) {
+      closeAllModals();
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.remove('hidden');
+        if (modalId === 'games-modal') {
+          setTimeout(initMiniGameCanvas, 100);
+        }
+        if (modalId === 'audio-modal') {
+          startVisualizerCanvas();
+        }
+      }
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('hidden');
+      if (modalId === 'games-modal') {
+        gameRunning = false;
+        cancelAnimationFrame(gameAnimFrame);
+      }
+    }
+
+    function closeAllModals() {
+      document.querySelectorAll('.modal-wrapper').forEach(m => m.classList.add('hidden'));
+      gameRunning = false;
+      cancelAnimationFrame(gameAnimFrame);
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toast-box');
+      const message = document.getElementById('toast-message');
+      message.textContent = msg;
+      box.classList.remove('translate-x-32', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        box.classList.add('translate-x-32', 'opacity-0', 'pointer-events-none');
+      }, 3200);
+    }
+
+    function copyContactEmail() {
+      const dummy = document.createElement('textarea');
+      dummy.value = 'remington.lee@example.com';
+      document.body.appendChild(dummy);
+      dummy.select();
+      document.execCommand('copy');
+      document.body.removeChild(dummy);
+      showToast('Email copied to clipboard!');
+    }
+
+    function triggerResumeConfetti() {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#8b5cf6', '#06b6d4', '#ec4899', '#f59e0b']
+      });
+      showToast('Resume PDF downloaded!');
+    }
+
+    function handleContactSubmit(e) {
+      e.preventDefault();
+      closeModal('contact-modal');
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.5 } });
+      showToast('Message transmitted! Remington will be in touch shortly.');
+    }
+
+    // Modal Audio Visualizer Waveform Drawer
+    function startVisualizerCanvas() {
+      const canvas = document.getElementById('modal-visualizer-canvas');
+      const placeholder = document.getElementById('vis-placeholder');
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      const bufferLength = analyser ? analyser.frequencyBinCount : 32;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function renderVis() {
+        if (document.getElementById('audio-modal').classList.contains('hidden')) return;
+
+        requestAnimationFrame(renderVis);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (analyser && isAudioPlaying) {
+          if (placeholder) placeholder.style.display = 'none';
+          analyser.getByteFrequencyData(dataArray);
+
+          const barWidth = (canvas.width / bufferLength) * 1.8;
+          let x = 0;
+
+          for (let i = 0; i < bufferLength; i++) {
+            const barHeight = (dataArray[i] / 255) * canvas.height;
+            ctx.fillStyle = `rgba(245, 158, 11, ${dataArray[i] / 255 + 0.2})`;
+            ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+            x += barWidth + 2;
+          }
+        } else {
+          if (placeholder) placeholder.style.display = 'block';
+        }
+      }
+      renderVis();
+    }
+
+    /* ==========================================================
+       8. MAIN ANIMATION LOOP (WINDOW ONLOAD)
+       ========================================================== */
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Smooth Camera LERP towards desired position & target
+      camera.position.lerp(desiredCameraPos, 0.045);
+      currentCameraTarget.lerp(desiredCameraTarget, 0.045);
+      camera.lookAt(currentCameraTarget);
+
+      // Rotate Vinyl Disc if audio is active
+      if (vinylMesh) {
+        if (isAudioPlaying) {
+          vinylMesh.rotation.y += 0.04;
+        }
+      }
+
+      // Pulse Studio Speakers to Bass
+      if (analyser && isAudioPlaying && leftSpeakerCone && rightSpeakerCone) {
+        const dataArray = new Uint8Array(8);
+        analyser.getByteFrequencyData(dataArray);
+        const bassVal = dataArray[0] / 255;
+        const scale = 1.0 + bassVal * 0.35;
+        leftSpeakerCone.scale.set(scale, scale, 1);
+        rightSpeakerCone.scale.set(scale, scale, 1);
+      }
+
+      // Update 2D Screen Projection of 3D Hotspots
+      updateHotspotsProjection();
+
+      // Render 3D Scene
+      renderer.render(scene, camera);
+    }
+
+    window.onload = function () {
+      initThreeScene();
+      animate();
+    };
+  </script>
+</body>
+</html>
